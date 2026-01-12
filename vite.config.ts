@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/accident-inspection/', // Cambiar por el nombre de tu repo
+  base: '/auto-inspections/', // Cambiar por el nombre de tu repo
   build: {
     outDir: 'dist',
     sourcemap: false,
