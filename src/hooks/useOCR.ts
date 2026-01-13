@@ -258,14 +258,21 @@ function parsePanamanianId(text: string, lines: string[], _dates: string[]): Par
     }
   }
 
-  // Words/phrases to SKIP (not names)
-  const skipPhrases = [
+  // Words/phrases to SKIP (not names) - EXACT match
+  const skipWords = new Set([
     'REPUBLICA', 'REPÚBLICA', 'PANAMA', 'PANAMÁ', 'TRIBUNAL', 'ELECTORAL', 
     'NOMBRE', 'FECHA', 'LUGAR', 'NACIMIENTO', 'MUESTRA', 'EXPIRA', 'SEXO', 
     'TIPO', 'SANGRE', 'TERNAL', 'ECTORAL', 'PATRIA', 'HACEMOS', 'TODOS', 
     'USUAL', 'CEDULA', 'CÉDULA', 'IDENTIDAD', 'MOCKUP', 'NACIONALIDAD',
-    'PANAMEÑA', 'PANAMENA', 'EMISION', 'EMISIÓN', 'VENCIMIENTO', 'FOTO'
-  ];
+    'PANAMEÑA', 'PANAMENA', 'EMISION', 'EMISIÓN', 'VENCIMIENTO', 'FOTO',
+    'DE', 'LA', 'EL', 'LOS', 'LAS', 'DEL', 'AL', 'EN', 'CON', 'POR', 'PARA'
+  ]);
+  
+  // Function to check if any word in text is a skip word
+  const containsSkipWord = (text: string): boolean => {
+    const words = text.toUpperCase().split(/\s+/);
+    return words.some(word => skipWords.has(word));
+  };
 
   // Look for name - pattern like "Margarita Gomez Velazquez" or "CRISTIAN CASTRO"
   // First try to find names in ALL CAPS (common in IDs)
@@ -275,10 +282,7 @@ function parsePanamanianId(text: string, lines: string[], _dates: string[]): Par
   for (const match of capsMatches) {
     const words = match.split(/\s+/);
     if (words.length >= 2 && words.length <= 4) {
-      const hasSkipWord = words.some(word => 
-        skipPhrases.some(skip => word.toUpperCase() === skip.toUpperCase())
-      );
-      if (!hasSkipWord && match.length >= 5 && match.length <= 40) {
+      if (!containsSkipWord(match) && match.length >= 5 && match.length <= 40) {
         data.fullName = formatName(match);
         console.log('Found ALL CAPS name:', data.fullName);
         break;
@@ -294,10 +298,7 @@ function parsePanamanianId(text: string, lines: string[], _dates: string[]): Par
     for (const match of matches) {
       const words = match.split(/\s+/);
       if (words.length >= 2 && words.length <= 4) {
-        const hasSkipWord = words.some(word => 
-          skipPhrases.some(skip => word.toUpperCase() === skip.toUpperCase())
-        );
-        if (!hasSkipWord) {
+        if (!containsSkipWord(match)) {
           data.fullName = match;
           console.log('Found mixed case name:', data.fullName);
           break;
@@ -311,10 +312,7 @@ function parsePanamanianId(text: string, lines: string[], _dates: string[]): Par
     for (const line of lines) {
       const cleanLine = line.trim();
       // Skip lines with institutional text
-      const hasSkip = skipPhrases.some(phrase => 
-        cleanLine.toUpperCase().includes(phrase)
-      );
-      if (hasSkip) continue;
+      if (containsSkipWord(cleanLine)) continue;
       
       // Look for lines that look like names (letters and spaces only)
       if (/^[A-Za-záéíóúñÁÉÍÓÚÑ\s]{8,50}$/.test(cleanLine)) {
