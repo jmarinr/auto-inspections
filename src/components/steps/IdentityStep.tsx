@@ -20,6 +20,17 @@ export const IdentityStep: React.FC = () => {
     !!(inspection.insuredPerson?.identity.extractedData)
   );
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  
+  // Editable fields for OCR results
+  const [fullName, setFullName] = useState(
+    inspection.insuredPerson?.identity.extractedData?.fullName || ''
+  );
+  const [idNumber, setIdNumber] = useState(
+    inspection.insuredPerson?.identity.extractedData?.idNumber || ''
+  );
+  const [expiryDate, setExpiryDate] = useState(
+    inspection.insuredPerson?.identity.extractedData?.expiryDate || ''
+  );
 
   const country = COUNTRIES.find((c) => c.code === inspection.country);
   const identityData = inspection.insuredPerson?.identity;
@@ -48,6 +59,11 @@ export const IdentityStep: React.FC = () => {
       const result = await extractIdData(frontImage, backImage, inspection.country);
       console.log('OCR Result:', result);
       
+      // Update editable fields with extracted data
+      if (result.data?.fullName) setFullName(result.data.fullName);
+      if (result.data?.idNumber) setIdNumber(result.data.idNumber);
+      if (result.data?.expiryDate) setExpiryDate(result.data.expiryDate);
+      
       updateInsuredIdentity({
         frontImage,
         backImage,
@@ -58,22 +74,31 @@ export const IdentityStep: React.FC = () => {
       
       setExtractionComplete(true);
       
-      if (!result.data) {
-        setExtractionError('No se pudo extraer datos. Intenta con fotos más claras.');
+      if (!result.data?.fullName && !result.data?.idNumber) {
+        setExtractionError('No se pudo extraer datos. Por favor ingresa los datos manualmente.');
       }
     } catch (err) {
       console.error('Error extracting data:', err);
-      setExtractionError('Error al procesar. Intenta de nuevo.');
+      setExtractionError('Error al procesar. Ingresa los datos manualmente.');
     } finally {
       setIsExtracting(false);
     }
   };
 
   const handleContinue = () => {
-    // Save images even if OCR failed
+    // Save both images and manually entered/corrected data
     updateInsuredIdentity({
       frontImage,
       backImage,
+      extractedData: {
+        fullName,
+        idNumber,
+        expiryDate,
+        birthDate: identityData?.extractedData?.birthDate || '',
+        nationality: country?.name || '',
+      },
+      confidence: identityData?.confidence || 0.5,
+      validated: !!(fullName && idNumber),
     });
     nextStep();
   };

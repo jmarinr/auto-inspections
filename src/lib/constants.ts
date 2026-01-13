@@ -112,12 +112,11 @@ export const VEHICLE_YEARS = Array.from({ length: 30 }, (_, i) => CURRENT_YEAR -
 
 export const WIZARD_STEPS = [
   { id: 'start', title: 'Inicio', subtitle: 'Información básica' },
-  { id: 'identity', title: 'Identidad', subtitle: 'Verificación del asegurado' },
-  { id: 'consent', title: 'Consentimiento', subtitle: 'Términos y condiciones' },
-  { id: 'vehicle', title: 'Vehículo', subtitle: 'Datos del vehículo' },
+  { id: 'identity', title: 'Identidad', subtitle: 'Verificación del conductor' },
   { id: 'photos', title: 'Fotografías', subtitle: 'Fotos del vehículo' },
+  { id: 'vehicle', title: 'Vehículo', subtitle: 'Datos del vehículo' },
   { id: 'damage', title: 'Daños', subtitle: 'Fotos de daños' },
   { id: 'third_party', title: 'Tercero', subtitle: 'Información del tercero' },
   { id: 'scene', title: 'Escena', subtitle: 'Lugar del accidente' },
-  { id: 'summary', title: 'Resumen', subtitle: 'Revisión final' },
+  { id: 'summary', title: 'Resumen', subtitle: 'Consentimiento y firma' },
 ];
