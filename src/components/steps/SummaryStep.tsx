@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge, Alert, Divider, Checkbox } from '../ui';
 import { useInspectionStore } from '../../stores/inspectionStore';
+import { submitInspectionToSupabase } from '../../lib/inspectionService';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -15,6 +16,7 @@ export const SummaryStep: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   
   const [accepted, setAccepted] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
@@ -41,8 +43,10 @@ export const SummaryStep: React.FC = () => {
     if (!accepted || !hasSignature || !signatureRef.current) return;
     
     setIsSubmitting(true);
+    setSubmitError(null);
     
     try {
+      // Guardar firma en el estado
       const signatureData = signatureRef.current.toDataURL('image/png');
       updateConsent({
         accepted: true,
@@ -50,9 +54,18 @@ export const SummaryStep: React.FC = () => {
         timestamp: new Date(),
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
-      const id = `INS-${Date.now().toString(36).toUpperCase()}`;
+      // Actualizar inspección con el consentimiento
+      const updatedInspection = {
+        ...inspection,
+        consent: {
+          accepted: true,
+          signatureUrl: signatureData,
+          timestamp: new Date(),
+        }
+      };
+
+      // Enviar a Supabase
+      const id = await submitInspectionToSupabase(updatedInspection);
       setSubmissionId(id);
       
       updateInspection({
@@ -63,7 +76,7 @@ export const SummaryStep: React.FC = () => {
       setIsSubmitted(true);
     } catch (error) {
       console.error('Error submitting:', error);
-      alert('Error al enviar.');
+      setSubmitError('Error al enviar. Por favor intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -121,7 +134,8 @@ export const SummaryStep: React.FC = () => {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
         <Loader2 className="w-12 h-12 animate-spin mb-4" style={{ color: 'var(--hk-primary)' }} />
-        <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Enviando...</p>
+        <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Enviando a HenkanCX...</p>
+        <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>Guardando fotos y datos</p>
       </div>
     );
   }
@@ -129,6 +143,12 @@ export const SummaryStep: React.FC = () => {
   // Summary
   return (
     <div className="space-y-5 animate-slide-up">
+      {submitError && (
+        <Alert variant="warning" icon={<AlertTriangle className="w-4 h-4" />}>
+          {submitError}
+        </Alert>
+      )}
+
       <Alert variant="info" icon={<FileText className="w-4 h-4" />}>
         Revisa, acepta los términos y firma para enviar.
       </Alert>
