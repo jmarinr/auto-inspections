@@ -3,7 +3,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { 
   Check, Send, Download, Share2, User, Car, Camera, MapPin, 
   FileText, AlertTriangle, Loader2, CheckCircle2, Shield, 
-  BarChart3, Trash2, ChevronDown, ChevronUp
+  Trash2, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Button, Card, Badge, Alert, Divider, Checkbox } from '../ui';
 import { useInspectionStore } from '../../stores/inspectionStore';
@@ -16,13 +16,11 @@ export const SummaryStep: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   
-  // Consent state
   const [accepted, setAccepted] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const signatureRef = useRef<SignatureCanvas>(null);
 
-  // Calculate stats
   const vehiclePhotos = inspection.insuredVehicle?.photos.filter(p => p.imageUrl).length || 0;
   const damagePhotos = inspection.insuredVehicle?.photos.filter(p => p.angle === 'damage' && p.imageUrl).length || 0;
   const scenePhotos = inspection.accidentScene?.photos.length || 0;
@@ -45,7 +43,6 @@ export const SummaryStep: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Save consent data
       const signatureData = signatureRef.current.toDataURL('image/png');
       updateConsent({
         accepted: true,
@@ -53,10 +50,8 @@ export const SummaryStep: React.FC = () => {
         timestamp: new Date(),
       });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       
-      // Generate submission ID
       const id = `INS-${Date.now().toString(36).toUpperCase()}`;
       setSubmissionId(id);
       
@@ -68,245 +63,152 @@ export const SummaryStep: React.FC = () => {
       setIsSubmitted(true);
     } catch (error) {
       console.error('Error submitting:', error);
-      alert('Error al enviar la inspección. Intenta de nuevo.');
+      alert('Error al enviar.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDownloadPDF = () => {
-    alert('Generando PDF...');
-  };
-
+  const handleDownloadPDF = () => alert('Generando PDF...');
+  
   const handleShare = () => {
     if (navigator.share) {
-      navigator.share({
-        title: 'Inspección de Accidente',
-        text: `Mi inspección de accidente ha sido completada. ID: ${submissionId}`,
-        url: window.location.href,
-      });
+      navigator.share({ title: 'Inspección', text: `ID: ${submissionId}`, url: window.location.href });
     } else {
-      navigator.clipboard.writeText(`Inspección completada. ID: ${submissionId}`);
-      alert('Enlace copiado al portapapeles');
+      navigator.clipboard.writeText(`Inspección ID: ${submissionId}`);
+      alert('Copiado');
     }
-  };
-
-  const handleNewInspection = () => {
-    resetInspection();
   };
 
   // Success Screen
   if (isSubmitted) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center animate-fade-in">
-        <div className="p-6 bg-emerald-500/20 rounded-full mb-6">
-          <CheckCircle2 className="w-16 h-16 text-emerald-400" />
+        <div className="p-4 bg-emerald-500/20 rounded-full mb-6">
+          <CheckCircle2 className="w-12 h-12 text-emerald-400" />
         </div>
         
-        <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-          ¡Inspección enviada!
-        </h2>
-        <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-          Tu inspección ha sido recibida correctamente
-        </p>
+        <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>¡Inspección enviada!</h2>
+        <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>Recibida correctamente</p>
 
-        <Card className="w-full max-w-md mb-6">
-          <div className="text-center">
-            <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>Número de referencia</p>
-            <p className="text-2xl font-mono font-bold text-primary-400">{submissionId}</p>
-          </div>
+        <Card className="w-full max-w-sm mb-6">
+          <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Referencia</p>
+          <p className="text-xl font-mono font-bold" style={{ color: 'var(--hk-primary)' }}>{submissionId}</p>
           <Divider className="my-4" />
-          <p className="text-sm text-center" style={{ color: 'var(--text-muted)' }}>
-            Guarda este número para dar seguimiento a tu reclamo. 
-            Recibirás una notificación cuando tu inspección sea procesada.
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Guarda este número para seguimiento.
           </p>
         </Card>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
-          <Button
-            variant="secondary"
-            fullWidth
-            onClick={handleDownloadPDF}
-            leftIcon={<Download className="w-5 h-5" />}
-          >
-            Descargar PDF
+        <div className="flex gap-3 w-full max-w-sm">
+          <Button variant="secondary" fullWidth onClick={handleDownloadPDF} leftIcon={<Download className="w-4 h-4" />}>
+            PDF
           </Button>
-          <Button
-            variant="secondary"
-            fullWidth
-            onClick={handleShare}
-            leftIcon={<Share2 className="w-5 h-5" />}
-          >
+          <Button variant="secondary" fullWidth onClick={handleShare} leftIcon={<Share2 className="w-4 h-4" />}>
             Compartir
           </Button>
         </div>
 
-        <Button
-          variant="ghost"
-          className="mt-6"
-          onClick={handleNewInspection}
-        >
-          Iniciar nueva inspección
-        </Button>
+        <button onClick={() => resetInspection()} className="mt-6 text-sm" style={{ color: 'var(--text-muted)' }}>
+          Nueva inspección
+        </button>
       </div>
     );
   }
 
-  // Submitting Screen
+  // Submitting
   if (isSubmitting) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
-        <Loader2 className="w-16 h-16 text-primary-400 animate-spin mb-6" />
-        <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-          Enviando inspección...
-        </h2>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Esto puede tomar unos segundos
-        </p>
+        <Loader2 className="w-12 h-12 animate-spin mb-4" style={{ color: 'var(--hk-primary)' }} />
+        <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Enviando...</p>
       </div>
     );
   }
 
-  // Summary Screen with Consent
+  // Summary
   return (
-    <div className="space-y-6 animate-slide-up">
-      <Alert variant="info" icon={<FileText className="w-5 h-5" />}>
-        Revisa la información, acepta los términos y firma para enviar.
+    <div className="space-y-5 animate-slide-up">
+      <Alert variant="info" icon={<FileText className="w-4 h-4" />}>
+        Revisa, acepta los términos y firma para enviar.
       </Alert>
 
-      {/* Overview Stats */}
+      {/* Stats */}
       <Card>
-        <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-          Resumen de la inspección
-        </h3>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
-            <p className="text-2xl font-bold text-primary-400">{totalPhotos}</p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Fotos totales</p>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Resumen</h3>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="stat-card">
+            <p className="stat-value">{totalPhotos}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Fotos</p>
           </div>
-          <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
-            <p className="text-2xl font-bold text-amber-400">{damagePhotos}</p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Fotos de daños</p>
+          <div className="stat-card">
+            <p className="stat-value">{damagePhotos}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Daños</p>
           </div>
-          <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
-            <p className="text-2xl font-bold text-emerald-400">
-              {inspection.hasThirdParty ? '1' : '0'}
-            </p>
+          <div className="stat-card">
+            <p className="stat-value">{inspection.hasThirdParty ? '1' : '0'}</p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Terceros</p>
           </div>
         </div>
       </Card>
 
-      {/* Identity Section */}
-      <Card 
-        className="cursor-pointer hover:border-primary-500/50 transition-colors"
-        onClick={() => setStep(1)}
-      >
+      {/* Sections */}
+      <Card className="cursor-pointer" onClick={() => setStep(1)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
-              <User className="w-5 h-5 text-primary-400" />
-            </div>
+            <User className="w-5 h-5" style={{ color: 'var(--hk-primary)' }} />
             <div>
-              <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>Conductor</h4>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Conductor</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {inspection.insuredPerson?.identity.extractedData?.fullName || 'Sin nombre'}
               </p>
             </div>
           </div>
           <Badge variant={inspection.insuredPerson?.identity.validated ? 'success' : 'warning'}>
-            {inspection.insuredPerson?.identity.validated ? 'Verificado' : 'Revisar'}
+            {inspection.insuredPerson?.identity.validated ? 'OK' : 'Revisar'}
           </Badge>
         </div>
       </Card>
 
-      {/* Vehicle Section */}
-      <Card 
-        className="cursor-pointer hover:border-primary-500/50 transition-colors"
-        onClick={() => setStep(3)}
-      >
+      <Card className="cursor-pointer" onClick={() => setStep(3)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
-              <Car className="w-5 h-5 text-primary-400" />
-            </div>
+            <Car className="w-5 h-5" style={{ color: 'var(--hk-primary)' }} />
             <div>
-              <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>Vehículo</h4>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                {inspection.insuredVehicle?.brand} {inspection.insuredVehicle?.model} {inspection.insuredVehicle?.year}
-                {inspection.insuredVehicle?.plate && ` • ${inspection.insuredVehicle.plate}`}
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Vehículo</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {inspection.insuredVehicle?.brand} {inspection.insuredVehicle?.model} • {inspection.insuredVehicle?.plate}
               </p>
             </div>
           </div>
-          <Badge variant="success">
-            <Check className="w-3 h-3" />
-            Completo
-          </Badge>
+          <Badge variant="success"><Check className="w-3 h-3" /></Badge>
         </div>
       </Card>
 
-      {/* Photos Section */}
-      <Card 
-        className="cursor-pointer hover:border-primary-500/50 transition-colors"
-        onClick={() => setStep(2)}
-      >
-        <div className="flex items-center justify-between mb-4">
+      <Card className="cursor-pointer" onClick={() => setStep(2)}>
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
-              <Camera className="w-5 h-5 text-primary-400" />
-            </div>
+            <Camera className="w-5 h-5" style={{ color: 'var(--hk-primary)' }} />
             <div>
-              <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>Fotografías</h4>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                {vehiclePhotos} del vehículo • {damagePhotos} de daños
-              </p>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Fotos</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{vehiclePhotos} vehículo • {damagePhotos} daños</p>
             </div>
           </div>
           <Badge variant={vehiclePhotos >= 8 ? 'success' : 'warning'}>
-            {vehiclePhotos >= 8 ? 'Completo' : 'Revisar'}
+            {vehiclePhotos >= 8 ? <Check className="w-3 h-3" /> : 'Revisar'}
           </Badge>
-        </div>
-        
-        {/* Photo thumbnails */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {inspection.insuredVehicle?.photos
-            .filter(p => p.imageUrl)
-            .slice(0, 6)
-            .map((photo) => (
-              <img
-                key={photo.id}
-                src={photo.imageUrl!}
-                alt={photo.label}
-                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-              />
-            ))}
-          {totalPhotos > 6 && (
-            <div 
-              className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: 'var(--bg-input)' }}
-            >
-              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>+{totalPhotos - 6}</span>
-            </div>
-          )}
         </div>
       </Card>
 
-      {/* Third Party Section */}
       {inspection.hasThirdParty && (
-        <Card 
-          className="cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => setStep(5)}
-        >
+        <Card className="cursor-pointer" onClick={() => setStep(5)}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
-                <AlertTriangle className="w-5 h-5 text-amber-400" />
-              </div>
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
               <div>
-                <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>Tercero involucrado</h4>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  {inspection.thirdPartyVehicle?.plate || 'Sin placa'} • 
-                  {inspection.thirdPartyVehicle?.brand} {inspection.thirdPartyVehicle?.model}
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Tercero</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {inspection.thirdPartyVehicle?.plate} • {inspection.thirdPartyVehicle?.brand}
                 </p>
               </div>
             </div>
@@ -315,164 +217,83 @@ export const SummaryStep: React.FC = () => {
         </Card>
       )}
 
-      {/* Scene Section */}
-      <Card 
-        className="cursor-pointer hover:border-primary-500/50 transition-colors"
-        onClick={() => setStep(6)}
-      >
+      <Card className="cursor-pointer" onClick={() => setStep(6)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
-              <MapPin className="w-5 h-5 text-primary-400" />
-            </div>
+            <MapPin className="w-5 h-5" style={{ color: 'var(--hk-primary)' }} />
             <div>
-              <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>Escena del accidente</h4>
-              <p className="text-sm line-clamp-1" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Escena</p>
+              <p className="text-xs truncate max-w-[180px]" style={{ color: 'var(--text-muted)' }}>
                 {inspection.accidentScene?.location.address || 'Sin dirección'}
               </p>
             </div>
           </div>
-          <Badge variant="success">
-            <Check className="w-3 h-3" />
-            Completo
-          </Badge>
+          <Badge variant="success"><Check className="w-3 h-3" /></Badge>
         </div>
       </Card>
 
-      {/* Consent Section */}
+      {/* Consent */}
       <Card>
-        <div 
-          className="flex items-center justify-between cursor-pointer"
-          onClick={() => setShowTerms(!showTerms)}
-        >
-          <div className="flex items-center gap-3">
-            <Shield className="w-5 h-5 text-primary-400" />
-            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-              Términos y consentimiento
-            </h3>
+        <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowTerms(!showTerms)}>
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4" style={{ color: 'var(--hk-primary)' }} />
+            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Términos</span>
           </div>
-          {showTerms ? (
-            <ChevronUp className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-          ) : (
-            <ChevronDown className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-          )}
+          {showTerms ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </div>
 
-        {/* Collapsible Terms */}
         {showTerms && (
-          <div className="mt-4 animate-fade-in">
-            <div 
-              className="rounded-xl p-4 mb-4 max-h-48 overflow-y-auto text-sm"
-              style={{ backgroundColor: 'var(--bg-input)' }}
-            >
-              <p className="mb-3" style={{ color: 'var(--text-secondary)' }}>
-                Al enviar esta inspección, autorizas a HenkanCX a:
-              </p>
-              <ul className="space-y-2" style={{ color: 'var(--text-secondary)' }}>
-                <li className="flex items-start gap-2">
-                  <BarChart3 className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-                  Procesar las fotografías mediante inteligencia artificial
-                </li>
-                <li className="flex items-start gap-2">
-                  <Shield className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  Almacenar temporalmente la información de tu inspección
-                </li>
-                <li className="flex items-start gap-2">
-                  <Share2 className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-                  Compartir el reporte con tu aseguradora
-                </li>
-              </ul>
-              <p className="mt-3 text-xs" style={{ color: 'var(--text-muted)' }}>
-                Tus datos serán eliminados después de 90 días. Declaro que la información proporcionada es verídica.
-              </p>
-            </div>
+          <div className="mt-4 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-secondary)' }}>
+            Al enviar, autorizas a HenkanCX a procesar las fotografías con IA, almacenar la información temporalmente y compartir el reporte con tu aseguradora. Datos eliminados en 90 días.
           </div>
         )}
 
-        {/* Checkbox */}
         <div className="mt-4">
           <Checkbox
             checked={accepted}
             onChange={(e) => setAccepted(e.target.checked)}
-            label={
-              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                He leído y acepto los términos de uso y autorizo el procesamiento de mis datos.
-              </span>
-            }
+            label={<span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Acepto los términos y condiciones</span>}
           />
         </div>
       </Card>
 
-      {/* Signature - Only show when accepted */}
+      {/* Signature */}
       {accepted && (
         <Card className="animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-              Firma digital
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearSignature}
-              leftIcon={<Trash2 className="w-4 h-4" />}
-            >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Firma</span>
+            <Button variant="secondary" size="sm" onClick={handleClearSignature} leftIcon={<Trash2 className="w-3 h-3" />}>
               Limpiar
             </Button>
           </div>
           
-          <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-            Firma para confirmar tu consentimiento
-          </p>
-
-          <div 
-            className="border-2 border-dashed rounded-xl overflow-hidden bg-white"
-            style={{ borderColor: 'var(--border-color)' }}
-          >
+          <div className="rounded-lg overflow-hidden bg-white" style={{ border: '1px solid var(--border-color)' }}>
             <SignatureCanvas
               ref={signatureRef}
               onEnd={handleSignatureEnd}
-              canvasProps={{
-                className: 'signature-pad w-full',
-                style: { width: '100%', height: '150px' },
-              }}
+              canvasProps={{ className: 'w-full', style: { width: '100%', height: '120px' } }}
               backgroundColor="white"
               penColor="black"
             />
           </div>
 
           {!hasSignature && (
-            <p className="text-sm mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
-              Dibuja tu firma arriba ☝️
-            </p>
+            <p className="text-xs text-center mt-2" style={{ color: 'var(--text-muted)' }}>Dibuja tu firma</p>
           )}
         </Card>
       )}
 
       {/* Timestamp */}
-      <div className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-        Inspección iniciada: {format(inspection.createdAt, "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
-      </div>
+      <p className="text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+        {format(inspection.createdAt, "d MMM yyyy, HH:mm", { locale: es })}
+      </p>
 
-      {/* Submit Actions */}
+      {/* Actions */}
       <div className="space-y-3">
-        <Button
-          fullWidth
-          onClick={handleSubmit}
-          disabled={!accepted || !hasSignature}
-          leftIcon={<Send className="w-5 h-5" />}
-        >
-          {!accepted ? 'Acepta los términos para continuar' : 
-           !hasSignature ? 'Firma para enviar' : 
-           'Enviar inspección'}
+        <Button fullWidth onClick={handleSubmit} disabled={!accepted || !hasSignature} leftIcon={<Send className="w-4 h-4" />}>
+          {!accepted ? 'Acepta los términos' : !hasSignature ? 'Firma para enviar' : 'Enviar inspección'}
         </Button>
-        
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={prevStep}
-        >
-          Volver a editar
-        </Button>
+        <Button variant="secondary" fullWidth onClick={prevStep}>Editar</Button>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Check, Info, X, RotateCcw, Sparkles, Loader2, Car, Zap } from 'lucide-react';
+import { Camera, Check, Info, X, RotateCcw, Sparkles, Loader2, Car } from 'lucide-react';
 import { Button, Card, Alert, Badge, ProgressBar } from '../ui';
 import { useInspectionStore } from '../../stores/inspectionStore';
 import { useVehicleOCR } from '../../hooks/useVehicleOCR';
@@ -39,47 +39,28 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
 
   if (photo.imageUrl) {
     return (
-      <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500 aspect-[4/3] group">
-        <img
-          src={photo.imageUrl}
-          alt={photo.label}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+      <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500 aspect-[4/3] group">
+        <img src={photo.imageUrl} alt={photo.label} className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         
-        {/* AI Badge for plate photo */}
         {isPlatePhoto && plateDetected && (
           <div className="absolute top-2 left-2">
-            <Badge variant="ai" className="text-xs">
-              <Zap className="w-3 h-3" />
-              {plateDetected}
-            </Badge>
+            <Badge variant="ai">{plateDetected}</Badge>
           </div>
         )}
         
-        {/* Status badge */}
         <div className="absolute top-2 right-2">
-          <div className="p-1.5 bg-emerald-500 rounded-full shadow-lg shadow-emerald-500/50">
-            <Check className="w-4 h-4 text-white" />
+          <div className="p-1 bg-emerald-500 rounded-full">
+            <Check className="w-3 h-3 text-white" />
           </div>
         </div>
         
-        {/* Label */}
         <div className="absolute bottom-2 left-2 right-2">
-          <p className="text-white font-medium text-sm drop-shadow-lg">{photo.label}</p>
+          <p className="text-white text-xs font-medium">{photo.label}</p>
         </div>
 
-        {/* Hover actions */}
-        <div className="absolute inset-0 bg-dark-900/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClear();
-            }}
-            leftIcon={<RotateCcw className="w-4 h-4" />}
-          >
+        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onClear(); }} leftIcon={<RotateCcw className="w-4 h-4" />}>
             Retomar
           </Button>
         </div>
@@ -89,64 +70,22 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
 
   return (
     <>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
+      <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
       <button
         onClick={() => inputRef.current?.click()}
         disabled={isCapturing}
-        className={`
-          rounded-2xl aspect-[4/3] 
-          flex flex-col items-center justify-center gap-2 p-4
-          transition-all duration-300
-          ${isCapturing ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
-        `}
-        style={{
-          background: 'var(--gradient-card)',
-          border: '2px dashed var(--border-light)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'var(--hk-magenta)';
-          e.currentTarget.style.boxShadow = '0 0 30px rgba(236, 72, 153, 0.2)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'var(--border-light)';
-          e.currentTarget.style.boxShadow = 'none';
-        }}
+        className="photo-card"
       >
         <div className="relative">
-          <div 
-            className="p-3 rounded-full"
-            style={{ background: 'var(--gradient-primary)' }}
-          >
-            <Camera className="w-6 h-6 text-white" />
+          <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--hk-primary)' }}>
+            <Camera className="w-5 h-5 text-white" />
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick();
-            }}
-            className="absolute -top-1 -right-1 p-1 rounded-full transition-colors"
-            style={{ backgroundColor: 'var(--bg-card-solid)' }}
-          >
+          <button onClick={(e) => { e.stopPropagation(); onClick(); }} className="absolute -top-1 -right-1 p-1 rounded-full" style={{ backgroundColor: 'var(--bg-card)' }}>
             <Info className="w-3 h-3" style={{ color: 'var(--text-muted)' }} />
           </button>
         </div>
-        <div className="text-center">
-          <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{photo.label}</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{photo.description}</p>
-        </div>
-        {isPlatePhoto && (
-          <Badge variant="ai" className="text-xs">
-            <Sparkles className="w-3 h-3" />
-            OCR Auto
-          </Badge>
-        )}
+        <p className="text-xs font-medium mt-2" style={{ color: 'var(--text-primary)' }}>{photo.label}</p>
+        {isPlatePhoto && <Badge variant="ai" className="mt-1"><Sparkles className="w-3 h-3" />OCR</Badge>}
       </button>
     </>
   );
@@ -156,9 +95,7 @@ export const VehiclePhotosStep: React.FC = () => {
   const { inspection, updateVehiclePhoto, updateInsuredVehicle, nextStep, prevStep } = useInspectionStore();
   const { isProcessing: isOCRProcessing, progress: ocrProgress, extractPlate } = useVehicleOCR();
   const [selectedPhoto, setSelectedPhoto] = useState<VehiclePhoto | null>(null);
-  const [detectedPlate, setDetectedPlate] = useState<string | null>(
-    inspection.insuredVehicle?.plate || null
-  );
+  const [detectedPlate, setDetectedPlate] = useState<string | null>(inspection.insuredVehicle?.plate || null);
   const [ocrComplete, setOcrComplete] = useState(false);
   
   const photos = inspection.insuredVehicle?.photos || [];
@@ -167,12 +104,8 @@ export const VehiclePhotosStep: React.FC = () => {
   const progress = Math.round((capturedCount / totalPhotos) * 100);
 
   const handlePhotoCapture = async (photoId: string, imageData: string) => {
-    updateVehiclePhoto('insured', photoId, {
-      imageUrl: imageData,
-      timestamp: new Date(),
-    });
+    updateVehiclePhoto('insured', photoId, { imageUrl: imageData, timestamp: new Date() });
 
-    // Auto-run OCR on plate photo (rear view)
     const photo = photos.find(p => p.id === photoId);
     if (photo?.angle === 'rear' && !detectedPlate) {
       try {
@@ -180,7 +113,6 @@ export const VehiclePhotosStep: React.FC = () => {
         if (result.plate) {
           setDetectedPlate(result.plate);
           setOcrComplete(true);
-          // Save to vehicle data
           updateInsuredVehicle({ plate: result.plate });
         }
       } catch (error) {
@@ -190,12 +122,7 @@ export const VehiclePhotosStep: React.FC = () => {
   };
 
   const handlePhotoClear = (photoId: string) => {
-    updateVehiclePhoto('insured', photoId, {
-      imageUrl: null,
-      timestamp: undefined,
-    });
-    
-    // Clear plate if clearing rear photo
+    updateVehiclePhoto('insured', photoId, { imageUrl: null, timestamp: undefined });
     const photo = photos.find(p => p.id === photoId);
     if (photo?.angle === 'rear') {
       setDetectedPlate(null);
@@ -203,101 +130,75 @@ export const VehiclePhotosStep: React.FC = () => {
     }
   };
 
-  const handleShowInfo = (photo: VehiclePhoto) => {
-    setSelectedPhoto(photo);
-  };
-
-  // Group photos by category
-  const exteriorPhotos = photos.filter((p) => 
-    ['front', 'front_45_left', 'left', 'rear_45_left', 'rear', 'rear_45_right', 'right', 'front_45_right'].includes(p.angle)
-  );
-  const interiorPhotos = photos.filter((p) => 
-    ['dashboard', 'interior_front', 'interior_rear', 'trunk'].includes(p.angle)
-  );
+  const exteriorPhotos = photos.filter((p) => ['front', 'front_45_left', 'left', 'rear_45_left', 'rear', 'rear_45_right', 'right', 'front_45_right'].includes(p.angle));
+  const interiorPhotos = photos.filter((p) => ['dashboard', 'interior_front', 'interior_rear', 'trunk'].includes(p.angle));
 
   return (
     <div className="space-y-6 animate-slide-up">
-      {/* AI Header Card */}
-      <div className="ai-detection-box">
-        <div className="ai-detection-content">
-          <div className="flex items-center gap-3 mb-3">
-            <div 
-              className="p-2 rounded-xl"
-              style={{ background: 'var(--gradient-primary)' }}
-            >
-              <Car className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                Captura inteligente de vehículo
-              </h3>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                La IA extraerá automáticamente la placa
-              </p>
-            </div>
+      {/* Header Card */}
+      <Card>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--hk-primary)' }}>
+            <Car className="w-5 h-5 text-white" />
           </div>
-          
-          {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="stat-card">
-              <p className="stat-value">{capturedCount}</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Fotos</p>
-            </div>
-            <div className="stat-card">
-              <p className="stat-value">{progress}%</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Progreso</p>
-            </div>
-            <div className="stat-card">
-              <p className={`text-2xl font-bold ${detectedPlate ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {detectedPlate ? '✓' : '—'}
-              </p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Placa</p>
-            </div>
+          <div>
+            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Fotografías del vehículo</h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>La IA extraerá la placa automáticamente</p>
           </div>
         </div>
-      </div>
+        
+        <div className="grid grid-cols-3 gap-3">
+          <div className="stat-card">
+            <p className="stat-value">{capturedCount}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Fotos</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-value">{progress}%</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Progreso</p>
+          </div>
+          <div className="stat-card">
+            <p className={`text-xl font-bold ${detectedPlate ? 'text-emerald-400' : ''}`} style={{ color: detectedPlate ? undefined : 'var(--text-muted)' }}>
+              {detectedPlate ? '✓' : '—'}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Placa</p>
+          </div>
+        </div>
+      </Card>
 
-      {/* OCR Processing State */}
+      {/* OCR Processing */}
       {isOCRProcessing && (
-        <Card className="animate-pulse-glow">
-          <div className="flex items-center gap-4">
-            <Loader2 className="w-8 h-8 text-primary-400 animate-spin" />
+        <Card>
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--hk-primary)' }} />
             <div className="flex-1">
-              <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                Detectando placa con IA...
-              </p>
-              <ProgressBar progress={ocrProgress} color="primary" />
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Detectando placa...</p>
+              <ProgressBar progress={ocrProgress} />
             </div>
           </div>
         </Card>
       )}
 
-      {/* Plate Detected Success */}
+      {/* Plate Detected */}
       {detectedPlate && ocrComplete && !isOCRProcessing && (
-        <Alert variant="success" icon={<Sparkles className="w-5 h-5" />}>
-          <div>
-            <span className="font-semibold">¡Placa detectada! </span>
-            <span className="font-mono text-lg">{detectedPlate}</span>
-          </div>
+        <Alert variant="success" icon={<Sparkles className="w-4 h-4" />}>
+          Placa detectada: <span className="font-mono font-bold">{detectedPlate}</span>
         </Alert>
       )}
 
       {/* Exterior Photos */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Exterior del vehículo
-          </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Exterior</h3>
           <Badge variant={exteriorPhotos.filter(p => p.imageUrl).length >= 6 ? 'success' : 'warning'}>
             {exteriorPhotos.filter(p => p.imageUrl).length}/{exteriorPhotos.length}
           </Badge>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {exteriorPhotos.map((photo) => (
             <PhotoCard
               key={photo.id}
               photo={photo}
-              onClick={() => handleShowInfo(photo)}
+              onClick={() => setSelectedPhoto(photo)}
               onCapture={(data) => handlePhotoCapture(photo.id, data)}
               onClear={() => handlePhotoClear(photo.id)}
               isPlatePhoto={photo.angle === 'rear'}
@@ -309,20 +210,18 @@ export const VehiclePhotosStep: React.FC = () => {
 
       {/* Interior Photos */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Interior del vehículo
-          </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Interior</h3>
           <Badge variant={interiorPhotos.filter(p => p.imageUrl).length >= 2 ? 'success' : 'warning'}>
             {interiorPhotos.filter(p => p.imageUrl).length}/{interiorPhotos.length}
           </Badge>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {interiorPhotos.map((photo) => (
             <PhotoCard
               key={photo.id}
               photo={photo}
-              onClick={() => handleShowInfo(photo)}
+              onClick={() => setSelectedPhoto(photo)}
               onCapture={(data) => handlePhotoCapture(photo.id, data)}
               onClear={() => handlePhotoClear(photo.id)}
             />
@@ -332,59 +231,27 @@ export const VehiclePhotosStep: React.FC = () => {
 
       {/* Photo Info Modal */}
       {selectedPhoto && (
-        <div 
-          className="fixed inset-0 flex items-center justify-center z-50 p-4"
-          style={{ backgroundColor: 'rgba(15, 10, 31, 0.95)' }}
-          onClick={() => setSelectedPhoto(null)}
-        >
-          <Card className="max-w-md w-full animate-slide-up">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }} onClick={() => setSelectedPhoto(null)}>
+          <Card className="max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {selectedPhoto.label}
-              </h3>
-              <button
-                onClick={() => setSelectedPhoto(null)}
-                className="p-2 rounded-full transition-colors"
-                style={{ backgroundColor: 'var(--bg-input)' }}
-              >
-                <X className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+              <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{selectedPhoto.label}</h3>
+              <button onClick={() => setSelectedPhoto(null)} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
+                <X className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
               </button>
             </div>
-            <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-              {selectedPhoto.description}
-            </p>
-            <div 
-              className="rounded-xl p-4"
-              style={{ backgroundColor: 'var(--bg-input)' }}
-            >
-              <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                Consejos:
-              </h4>
-              <ul className="text-sm space-y-1" style={{ color: 'var(--text-muted)' }}>
-                <li>• Asegúrate de que el vehículo esté bien iluminado</li>
-                <li>• Mantén la cámara estable</li>
-                <li>• Incluye todo el área indicada en la foto</li>
-                <li>• Evita reflejos y sombras</li>
-              </ul>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>{selectedPhoto.description}</p>
+            <div className="p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-muted)' }}>
+              • Buena iluminación • Cámara estable • Incluir toda el área
             </div>
           </Card>
         </div>
       )}
 
       {/* Navigation */}
-      <div className="flex gap-4">
-        <Button variant="secondary" onClick={prevStep}>
-          Atrás
-        </Button>
-        <Button
-          fullWidth
-          onClick={nextStep}
-          disabled={capturedCount < 8}
-          leftIcon={capturedCount >= 8 ? <Sparkles className="w-5 h-5" /> : undefined}
-        >
-          {capturedCount < 8 
-            ? `Faltan ${8 - capturedCount} fotos mínimas` 
-            : 'Continuar'}
+      <div className="flex gap-3">
+        <Button variant="secondary" onClick={prevStep}>Atrás</Button>
+        <Button fullWidth onClick={nextStep} disabled={capturedCount < 8}>
+          {capturedCount < 8 ? `Faltan ${8 - capturedCount} fotos` : 'Continuar'}
         </Button>
       </div>
     </div>

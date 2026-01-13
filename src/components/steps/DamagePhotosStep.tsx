@@ -1,8 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Camera, Check, AlertTriangle, X, Sparkles, Loader2, 
-  Zap, ShieldAlert, ChevronDown, ChevronUp 
-} from 'lucide-react';
+import { Camera, Check, AlertTriangle, X, Sparkles, Loader2, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button, Card, Alert, Badge, ProgressBar } from '../ui';
 import { useInspectionStore } from '../../stores/inspectionStore';
 import { useDamageDetection, getDamageTypeLabel, getSeverityLabel, getSeverityColor } from '../../hooks/useDamageDetection';
@@ -36,14 +33,12 @@ export const DamagePhotosStep: React.FC = () => {
       const compressed = await compressImage(file, { maxSizeMB: 0.8 });
       const base64 = await fileToBase64(compressed);
       
-      // Create new photo entry
       const newPhoto: DamagePhoto = {
         id: `damage-${Date.now()}`,
         imageUrl: base64,
         timestamp: new Date(),
       };
       
-      // Run AI analysis
       const analysis = await analyzeImage(base64);
       newPhoto.analysis = analysis;
       setCurrentAnalysis(analysis);
@@ -62,10 +57,7 @@ export const DamagePhotosStep: React.FC = () => {
     if (expandedPhoto === photoId) setExpandedPhoto(null);
   };
 
-  const totalDamagesDetected = damagePhotos.reduce(
-    (acc, photo) => acc + (photo.analysis?.damages.length || 0), 
-    0
-  );
+  const totalDamagesDetected = damagePhotos.reduce((acc, photo) => acc + (photo.analysis?.damages.length || 0), 0);
 
   const overallSeverity = damagePhotos.length > 0
     ? damagePhotos.some(p => p.analysis?.overallSeverity === 'severe') ? 'severe'
@@ -76,311 +68,185 @@ export const DamagePhotosStep: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      {/* AI Analysis Header */}
-      <div className="ai-detection-box">
-        <div className="ai-detection-content">
-          <div className="flex items-center gap-3 mb-4">
-            <div 
-              className="p-2 rounded-xl"
-              style={{ background: 'var(--gradient-primary)' }}
-            >
-              <ShieldAlert className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                Detección de daños con IA
-              </h3>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Toma fotos de los daños para análisis automático
-              </p>
-            </div>
+      {/* Header */}
+      <Card>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--hk-primary)' }}>
+            <ShieldAlert className="w-5 h-5 text-white" />
           </div>
-          
-          {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="stat-card">
-              <p className="stat-value">{damagePhotos.length}</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Fotos</p>
-            </div>
-            <div className="stat-card">
-              <p className="stat-value">{totalDamagesDetected}</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Daños</p>
-            </div>
-            <div className="stat-card">
-              <p className={`text-2xl font-bold ${getSeverityColor(overallSeverity)}`}>
-                {overallSeverity === 'none' ? '—' : 
-                 overallSeverity === 'minor' ? '!' :
-                 overallSeverity === 'moderate' ? '!!' : '!!!'}
-              </p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Severidad</p>
-            </div>
+          <div>
+            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Detección de daños</h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>La IA analizará cada foto automáticamente</p>
           </div>
         </div>
-      </div>
+        
+        <div className="grid grid-cols-3 gap-3">
+          <div className="stat-card">
+            <p className="stat-value">{damagePhotos.length}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Fotos</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-value">{totalDamagesDetected}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Daños</p>
+          </div>
+          <div className="stat-card">
+            <p className={`text-xl font-bold ${getSeverityColor(overallSeverity)}`}>
+              {overallSeverity === 'none' ? '—' : overallSeverity === 'minor' ? '!' : overallSeverity === 'moderate' ? '!!' : '!!!'}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Severidad</p>
+          </div>
+        </div>
+      </Card>
 
-      {/* Processing State */}
+      {/* Processing */}
       {isAnalyzing && (
-        <Card className="animate-pulse-glow">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Loader2 className="w-10 h-10 text-primary-400 animate-spin" />
-              <Zap className="w-4 h-4 text-amber-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-            </div>
+        <Card>
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--hk-primary)' }} />
             <div className="flex-1">
-              <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                Analizando imagen con IA...
-              </p>
-              <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
-                Detectando daños, rayones y abolladuras
-              </p>
-              <ProgressBar progress={progress} color="primary" />
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Analizando daños...</p>
+              <ProgressBar progress={progress} />
             </div>
           </div>
         </Card>
       )}
 
-      {/* Latest Analysis Result */}
+      {/* Latest Analysis */}
       {currentAnalysis && !isAnalyzing && damagePhotos.length > 0 && (
-        <Card className="border-primary-500/50 animate-fade-in">
-          <div className="flex items-center gap-3 mb-4">
-            <Sparkles className="w-5 h-5 text-primary-400" />
-            <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-              Último análisis IA
-            </h4>
-            <Badge variant="ai">
-              {Math.round(currentAnalysis.confidence * 100)}% confianza
-            </Badge>
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4" style={{ color: 'var(--hk-primary)' }} />
+            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Último análisis</span>
+            <Badge variant="ai">{Math.round(currentAnalysis.confidence * 100)}%</Badge>
           </div>
           
           {currentAnalysis.hasDamage ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {currentAnalysis.damages.map((damage, idx) => (
-                  <Badge 
-                    key={idx} 
-                    variant={damage.severity === 'severe' ? 'warning' : 
-                             damage.severity === 'moderate' ? 'warning' : 'info'}
-                  >
-                    <AlertTriangle className="w-3 h-3" />
-                    {getDamageTypeLabel(damage.type)} - {getSeverityLabel(damage.severity)}
-                  </Badge>
-                ))}
-              </div>
-              {currentAnalysis.recommendations.length > 0 && (
-                <div 
-                  className="rounded-lg p-3 text-sm"
-                  style={{ backgroundColor: 'var(--bg-input)' }}
-                >
-                  <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                    Recomendaciones:
-                  </p>
-                  <ul className="space-y-1" style={{ color: 'var(--text-muted)' }}>
-                    {currentAnalysis.recommendations.map((rec, idx) => (
-                      <li key={idx}>• {rec}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+            <div className="flex flex-wrap gap-2">
+              {currentAnalysis.damages.map((damage, idx) => (
+                <Badge key={idx} variant={damage.severity === 'severe' ? 'warning' : 'info'}>
+                  <AlertTriangle className="w-3 h-3" />
+                  {getDamageTypeLabel(damage.type)} - {getSeverityLabel(damage.severity)}
+                </Badge>
+              ))}
             </div>
           ) : (
-            <Alert variant="success" icon={<Check className="w-5 h-5" />}>
-              No se detectaron daños visibles en esta imagen
+            <Alert variant="success" icon={<Check className="w-4 h-4" />}>
+              No se detectaron daños en esta imagen
             </Alert>
           )}
         </Card>
       )}
 
-      {/* Capture Button */}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
+      {/* Upload Button */}
+      <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
       
       <button
         onClick={() => inputRef.current?.click()}
         disabled={isCapturing || isAnalyzing}
         className="w-full upload-zone"
-        style={{ minHeight: '140px' }}
       >
-        <div 
-          className="p-4 rounded-full"
-          style={{ background: 'var(--gradient-primary)' }}
-        >
-          <Camera className="w-8 h-8 text-white" />
+        <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--hk-primary)' }}>
+          <Camera className="w-6 h-6 text-white" />
         </div>
         <div className="text-center">
-          <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Agregar foto de daño
-          </p>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            La IA analizará automáticamente el daño
-          </p>
+          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Agregar foto de daño</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Análisis automático con IA</p>
         </div>
-        <Badge variant="ai">
-          <Sparkles className="w-3 h-3" />
-          Análisis automático
-        </Badge>
       </button>
 
-      {/* Captured Damage Photos */}
+      {/* Damage Photos List */}
       {damagePhotos.length > 0 && (
-        <div>
-          <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
             Fotos de daños ({damagePhotos.length})
           </h3>
-          <div className="space-y-4">
-            {damagePhotos.map((photo) => (
-              <Card key={photo.id} className="overflow-hidden">
-                {/* Photo Header */}
-                <div 
-                  className="flex items-center justify-between cursor-pointer"
-                  onClick={() => setExpandedPhoto(expandedPhoto === photo.id ? null : photo.id)}
-                >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={photo.imageUrl}
-                      alt="Daño"
-                      className="w-16 h-16 rounded-lg object-cover"
-                    />
-                    <div>
-                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                        {photo.analysis?.damages.length || 0} daño(s) detectado(s)
-                      </p>
-                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        Severidad: {photo.analysis?.overallSeverity === 'none' 
-                          ? 'Ninguna' 
-                          : getSeverityLabel(photo.analysis?.overallSeverity || 'minor')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={
-                      photo.analysis?.overallSeverity === 'severe' ? 'warning' :
-                      photo.analysis?.overallSeverity === 'moderate' ? 'warning' : 
-                      photo.analysis?.hasDamage ? 'info' : 'success'
-                    }>
-                      {Math.round((photo.analysis?.confidence || 0) * 100)}%
-                    </Badge>
-                    {expandedPhoto === photo.id ? (
-                      <ChevronUp className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-                    ) : (
-                      <ChevronDown className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-                    )}
+          {damagePhotos.map((photo) => (
+            <Card key={photo.id}>
+              <div 
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => setExpandedPhoto(expandedPhoto === photo.id ? null : photo.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <img src={photo.imageUrl} alt="Daño" className="w-14 h-14 rounded-lg object-cover" />
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {photo.analysis?.damages.length || 0} daño(s)
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {photo.analysis?.overallSeverity === 'none' 
+                        ? 'Sin daños' 
+                        : `Severidad: ${getSeverityLabel(photo.analysis?.overallSeverity || 'minor')}`}
+                    </p>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={photo.analysis?.hasDamage ? 'warning' : 'success'}>
+                    {Math.round((photo.analysis?.confidence || 0) * 100)}%
+                  </Badge>
+                  {expandedPhoto === photo.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
+              </div>
 
-                {/* Expanded Details */}
-                {expandedPhoto === photo.id && (
-                  <div className="mt-4 pt-4 animate-fade-in" style={{ borderTop: '1px solid var(--border-color)' }}>
-                    {/* Full Image with damage markers */}
-                    <div className="relative rounded-xl overflow-hidden mb-4">
-                      <img
-                        src={photo.imageUrl}
-                        alt="Daño"
-                        className="w-full rounded-xl"
-                      />
-                      {/* Damage markers overlay */}
-                      {photo.analysis?.damages.map((damage, idx) => (
-                        damage.boundingBox && (
-                          <div
-                            key={idx}
-                            className="damage-marker"
-                            style={{
-                              left: `${damage.boundingBox.x * 100}%`,
-                              top: `${damage.boundingBox.y * 100}%`,
-                            }}
-                            title={`${getDamageTypeLabel(damage.type)}: ${damage.location}`}
-                          >
-                            {idx + 1}
+              {expandedPhoto === photo.id && (
+                <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
+                  <div className="relative rounded-lg overflow-hidden mb-4">
+                    <img src={photo.imageUrl} alt="Daño" className="w-full rounded-lg" />
+                    {photo.analysis?.damages.map((damage, idx) => (
+                      damage.boundingBox && (
+                        <div
+                          key={idx}
+                          className="damage-marker"
+                          style={{ left: `${damage.boundingBox.x * 100}%`, top: `${damage.boundingBox.y * 100}%` }}
+                        >
+                          {idx + 1}
+                        </div>
+                      )
+                    ))}
+                  </div>
+
+                  {photo.analysis?.damages && photo.analysis.damages.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {photo.analysis.damages.map((damage, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-input)' }}>
+                          <div className="flex items-center gap-2">
+                            <span 
+                              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                              style={{ backgroundColor: damage.severity === 'severe' ? '#ef4444' : damage.severity === 'moderate' ? '#f59e0b' : '#eab308' }}
+                            >
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{getDamageTypeLabel(damage.type)}</p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{damage.location}</p>
+                            </div>
                           </div>
-                        )
+                          <Badge variant={damage.severity === 'severe' ? 'warning' : 'info'}>{getSeverityLabel(damage.severity)}</Badge>
+                        </div>
                       ))}
                     </div>
+                  )}
 
-                    {/* Damage List */}
-                    {photo.analysis?.damages && photo.analysis.damages.length > 0 && (
-                      <div className="space-y-2 mb-4">
-                        {photo.analysis.damages.map((damage, idx) => (
-                          <div 
-                            key={idx}
-                            className="flex items-center justify-between p-3 rounded-lg"
-                            style={{ backgroundColor: 'var(--bg-input)' }}
-                          >
-                            <div className="flex items-center gap-3">
-                              <span 
-                                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                                style={{ backgroundColor: 
-                                  damage.severity === 'severe' ? '#ef4444' :
-                                  damage.severity === 'moderate' ? '#f59e0b' : '#eab308'
-                                }}
-                              >
-                                {idx + 1}
-                              </span>
-                              <div>
-                                <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                                  {getDamageTypeLabel(damage.type)}
-                                </p>
-                                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                                  {damage.location}
-                                </p>
-                              </div>
-                            </div>
-                            <Badge variant={
-                              damage.severity === 'severe' ? 'warning' :
-                              damage.severity === 'moderate' ? 'warning' : 'info'
-                            }>
-                              {getSeverityLabel(damage.severity)}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Remove button */}
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      fullWidth
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemovePhoto(photo.id);
-                      }}
-                      leftIcon={<X className="w-4 h-4" />}
-                    >
-                      Eliminar foto
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
+                  <Button variant="secondary" size="sm" fullWidth onClick={(e) => { e.stopPropagation(); handleRemovePhoto(photo.id); }} leftIcon={<X className="w-4 h-4" />}>
+                    Eliminar
+                  </Button>
+                </div>
+              )}
+            </Card>
+          ))}
         </div>
       )}
 
-      {/* No damage option */}
       {damagePhotos.length === 0 && (
-        <Alert variant="info" icon={<AlertTriangle className="w-5 h-5" />}>
-          Si no hay daños visibles, puedes continuar sin agregar fotos de daños.
+        <Alert variant="info" icon={<AlertTriangle className="w-4 h-4" />}>
+          Sin daños visibles, puedes continuar sin fotos.
         </Alert>
       )}
 
       {/* Navigation */}
-      <div className="flex gap-4">
-        <Button variant="secondary" onClick={prevStep}>
-          Atrás
-        </Button>
-        <Button
-          fullWidth
-          onClick={nextStep}
-          leftIcon={<Sparkles className="w-5 h-5" />}
-        >
-          {damagePhotos.length > 0 
-            ? `Continuar (${totalDamagesDetected} daños)` 
-            : 'Continuar sin daños'}
+      <div className="flex gap-3">
+        <Button variant="secondary" onClick={prevStep}>Atrás</Button>
+        <Button fullWidth onClick={nextStep}>
+          {damagePhotos.length > 0 ? `Continuar (${totalDamagesDetected} daños)` : 'Continuar sin daños'}
         </Button>
       </div>
     </div>
