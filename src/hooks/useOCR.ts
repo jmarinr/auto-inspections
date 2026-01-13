@@ -236,84 +236,119 @@ function parsePanamanianId(text: string, lines: string[], _dates: string[]): Par
   
   console.log('Parsing Panamanian ID...');
   console.log('Raw text:', text);
-  console.log('Lines:', lines);
 
-  // Panamanian ID patterns: X-XXX-XXXX or XX-XXXX-XXXXXX or just numbers with dashes
+  // Panamanian ID patterns: X-XXX-XXXX or XX-XXXX-XXXXXX
   const idPatterns = [
-    /\d{1,2}-\d{2,4}-\d{3,6}/,  // Standard format
-    /[0-9]+-[0-9]+-[0-9]+/,     // Any dash-separated numbers
+    /\b(\d{1,2})-(\d{2,4})-(\d{3,6})\b/,     // Standard: 2-1096-4533
+    /\b(\d{1,2})[-–](\d{3,4})[-–](\d{3,5})\b/, // With different dashes
+    /\b([0-9]+)[-–]([0-9]+)[-–]([0-9]+)\b/,   // Any numbers with dashes
   ];
   
   for (const pattern of idPatterns) {
     const match = text.match(pattern);
     if (match) {
-      data.idNumber = match[0];
+      // Reconstruct with standard dash
+      if (match[1] && match[2] && match[3]) {
+        data.idNumber = `${match[1]}-${match[2]}-${match[3]}`;
+      } else {
+        data.idNumber = match[0];
+      }
       console.log('Found ID:', data.idNumber);
       break;
     }
   }
 
-  // Look for name - usually after "NOMBRE" or lines with multiple uppercase words
-  const namePatterns = [
-    /(?:NOMBRE[:\s]*)?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)+)/,
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,4})/,
+  // Words/phrases to SKIP (not names)
+  const skipPhrases = [
+    'REPUBLICA', 'REPÚBLICA', 'PANAMA', 'PANAMÁ', 'TRIBUNAL', 'ELECTORAL', 
+    'NOMBRE', 'FECHA', 'LUGAR', 'NACIMIENTO', 'MUESTRA', 'EXPIRA', 'SEXO', 
+    'TIPO', 'SANGRE', 'TERNAL', 'ECTORAL', 'PATRIA', 'HACEMOS', 'TODOS', 
+    'USUAL', 'CEDULA', 'CÉDULA', 'IDENTIDAD', 'MOCKUP', 'NACIONALIDAD',
+    'PANAMEÑA', 'PANAMENA', 'EMISION', 'EMISIÓN', 'VENCIMIENTO', 'FOTO'
   ];
+
+  // Look for name - pattern like "Margarita Gomez Velazquez" or "CRISTIAN CASTRO"
+  // First try to find names in ALL CAPS (common in IDs)
+  const allCapsNameRegex = /\b([A-ZÁÉÍÓÚÑ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ]{2,}){1,4})\b/g;
+  const capsMatches = text.match(allCapsNameRegex) || [];
   
-  for (const pattern of namePatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      const possibleName = match[1] || match[0];
-      // Validate it looks like a name (2-5 words, not containing numbers)
-      if (possibleName.split(/\s+/).length >= 2 && !/\d/.test(possibleName)) {
-        data.fullName = formatName(possibleName);
-        console.log('Found name:', data.fullName);
+  for (const match of capsMatches) {
+    const words = match.split(/\s+/);
+    if (words.length >= 2 && words.length <= 4) {
+      const hasSkipWord = words.some(word => 
+        skipPhrases.some(skip => word.toUpperCase() === skip.toUpperCase())
+      );
+      if (!hasSkipWord && match.length >= 5 && match.length <= 40) {
+        data.fullName = formatName(match);
+        console.log('Found ALL CAPS name:', data.fullName);
         break;
       }
     }
   }
 
-  // If no name found, try line by line
+  // If not found in caps, try mixed case pattern
   if (!data.fullName) {
-    for (const line of lines) {
-      const cleanLine = line.trim();
-      // Look for lines that look like names (2+ capitalized words)
-      if (/^[A-Za-záéíóúñÁÉÍÓÚÑ\s]{5,50}$/.test(cleanLine)) {
-        const words = cleanLine.split(/\s+/).filter(w => w.length > 1);
-        if (words.length >= 2 && words.length <= 5) {
-          // Skip common non-name phrases
-          const skipPhrases = ['REPUBLICA', 'PANAMA', 'TRIBUNAL', 'ELECTORAL', 'NOMBRE', 'FECHA', 'LUGAR', 'NACIMIENTO', 'MUESTRA'];
-          const isSkip = skipPhrases.some(phrase => cleanLine.toUpperCase().includes(phrase));
-          if (!isSkip) {
-            data.fullName = formatName(cleanLine);
-            console.log('Found name from line:', data.fullName);
-            break;
-          }
+    const nameRegex = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b/g;
+    const matches = text.match(nameRegex) || [];
+    
+    for (const match of matches) {
+      const words = match.split(/\s+/);
+      if (words.length >= 2 && words.length <= 4) {
+        const hasSkipWord = words.some(word => 
+          skipPhrases.some(skip => word.toUpperCase() === skip.toUpperCase())
+        );
+        if (!hasSkipWord) {
+          data.fullName = match;
+          console.log('Found mixed case name:', data.fullName);
+          break;
         }
       }
     }
   }
 
-  // Parse dates - look for various formats
+  // If not found, try line by line with looser matching
+  if (!data.fullName) {
+    for (const line of lines) {
+      const cleanLine = line.trim();
+      // Skip lines with institutional text
+      const hasSkip = skipPhrases.some(phrase => 
+        cleanLine.toUpperCase().includes(phrase)
+      );
+      if (hasSkip) continue;
+      
+      // Look for lines that look like names (letters and spaces only)
+      if (/^[A-Za-záéíóúñÁÉÍÓÚÑ\s]{8,50}$/.test(cleanLine)) {
+        const words = cleanLine.split(/\s+/).filter(w => w.length > 1);
+        if (words.length >= 2 && words.length <= 5) {
+          data.fullName = formatName(cleanLine);
+          console.log('Found name from line:', data.fullName);
+          break;
+        }
+      }
+    }
+  }
+
+  // Parse dates - look for DD-MMM-YYYY or DD/MM/YYYY formats
   const datePatterns = [
-    /\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/g,
-    /\d{1,2}[-\/][A-Z]{3}[-\/]\d{2,4}/gi,
+    /\d{1,2}[-\/][A-Z]{3}[-\/]\d{4}/gi,  // 08-OCT-1956
+    /\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/g,     // 01-02-2027
   ];
   
   const allDates: string[] = [];
   for (const pattern of datePatterns) {
-    const matches = text.match(pattern);
-    if (matches) {
-      allDates.push(...matches);
+    const dateMatches = text.match(pattern);
+    if (dateMatches) {
+      allDates.push(...dateMatches);
     }
   }
   
   console.log('Found dates:', allDates);
   
   if (allDates.length >= 1) {
-    data.birthDate = formatDate(allDates[0]);
+    data.birthDate = allDates[0];
   }
   if (allDates.length >= 2) {
-    data.expiryDate = formatDate(allDates[allDates.length - 1]);
+    data.expiryDate = allDates[allDates.length - 1];
   }
 
   data.nationality = 'Panameña';
