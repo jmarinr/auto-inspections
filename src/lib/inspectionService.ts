@@ -1,5 +1,5 @@
-import { saveInspection, savePhotos, saveConsent } from './supabase';
-import type { Inspection } from '../types';
+import { saveInspection, savePhotos, saveConsent, saveDamages } from './supabase';
+import type { Inspection, VehiclePhoto } from '../types';
 
 export async function submitInspectionToSupabase(inspection: Inspection): Promise<string> {
   const inspectionId = `INS-${Date.now().toString(36).toUpperCase()}`;
@@ -12,15 +12,22 @@ export async function submitInspectionToSupabase(inspection: Inspection): Promis
   const tags = generateTags(inspection);
   
   try {
+    // 1. Guardar inspección principal con TODOS los datos
     await saveInspection({
       id: inspectionId,
       status: 'Pendiente',
       
+      // Cliente asegurado
       client_name: inspection.insuredPerson?.identity.extractedData?.fullName || null,
       client_id: inspection.insuredPerson?.identity.extractedData?.idNumber || null,
       client_phone: inspection.insuredPerson?.phone || null,
       client_email: inspection.insuredPerson?.email || null,
+      client_address: inspection.insuredPerson?.address || null,
+      client_driver_license: inspection.insuredPerson?.driverLicense || null,
+      client_id_front_image: inspection.insuredPerson?.identity.frontImage || null,
+      client_id_back_image: inspection.insuredPerson?.identity.backImage || null,
       
+      // Vehículo asegurado
       vehicle_vin: inspection.insuredVehicle?.vin || null,
       vehicle_plate: inspection.insuredVehicle?.plate || null,
       vehicle_brand: inspection.insuredVehicle?.brand || null,
@@ -28,74 +35,160 @@ export async function submitInspectionToSupabase(inspection: Inspection): Promis
       vehicle_year: inspection.insuredVehicle?.year || null,
       vehicle_color: inspection.insuredVehicle?.color || null,
       vehicle_mileage: inspection.insuredVehicle?.mileage || null,
-      vehicle_usage: 'Particular',
+      vehicle_usage: inspection.insuredVehicle?.usage || 'private',
+      vehicle_has_garage: inspection.insuredVehicle?.hasGarage || false,
       
+      // Tercero (si existe)
+      has_third_party: inspection.hasThirdParty,
+      third_party_name: inspection.thirdPartyPerson?.identity.extractedData?.fullName || null,
+      third_party_id: inspection.thirdPartyPerson?.identity.extractedData?.idNumber || null,
+      third_party_phone: inspection.thirdPartyPerson?.phone || null,
+      third_party_email: inspection.thirdPartyPerson?.email || null,
+      third_party_id_front_image: inspection.thirdPartyPerson?.identity.frontImage || null,
+      third_party_id_back_image: inspection.thirdPartyPerson?.identity.backImage || null,
+      
+      // Vehículo del tercero
+      third_party_vehicle_plate: inspection.thirdPartyVehicle?.plate || null,
+      third_party_vehicle_brand: inspection.thirdPartyVehicle?.brand || null,
+      third_party_vehicle_model: inspection.thirdPartyVehicle?.model || null,
+      third_party_vehicle_year: inspection.thirdPartyVehicle?.year || null,
+      third_party_vehicle_color: inspection.thirdPartyVehicle?.color || null,
+      
+      // Póliza
       policy_number: inspection.policyNumber || null,
+      claim_number: inspection.claimNumber || null,
       policy_type: 'Standard',
       policy_status: 'En-Proceso',
       
+      // Scores
       risk_score: riskScore,
       quality_score: qualityScore,
       
+      // Accidente
       accident_type: inspection.accidentType || null,
       accident_date: inspection.createdAt.toISOString(),
       accident_location: inspection.accidentScene?.location.address || null,
       accident_lat: inspection.accidentScene?.location.latitude || null,
       accident_lng: inspection.accidentScene?.location.longitude || null,
       
+      // Información adicional del accidente
+      accident_description: inspection.accidentScene?.description || null,
+      accident_sketch_url: inspection.accidentScene?.sketchUrl || null,
+      has_witnesses: inspection.accidentScene?.hasWitnesses || false,
+      witness_info: inspection.accidentScene?.witnessInfo || null,
+      police_present: inspection.accidentScene?.policePresent || false,
+      police_report_number: inspection.accidentScene?.policeReportNumber || null,
+      
+      // Comentarios
       client_comments: inspection.accidentScene?.description || null,
+      
+      // SLA y metadata
       sla_deadline: slaDeadline.toISOString(),
       tags: tags,
       country: inspection.country,
     });
     
+    // 2. Guardar fotos del vehículo asegurado
     const vehiclePhotos = (inspection.insuredVehicle?.photos || [])
-      .filter((p: { imageUrl?: string | null }) => p.imageUrl)
-      .map((p: { angle?: string; label?: string; imageUrl?: string | null; timestamp?: Date }) => ({
+      .filter((p: VehiclePhoto) => p.imageUrl)
+      .map((p: VehiclePhoto) => ({
         inspection_id: inspectionId,
         photo_type: 'vehicle' as const,
+        category: p.angle === 'damage' ? 'damage' : 'exterior',
         angle: p.angle || null,
         label: p.label || null,
+        description: p.description || null,
         image_url: p.imageUrl || null,
+        thumbnail_url: p.thumbnailUrl || null,
+        latitude: p.metadata?.latitude || null,
+        longitude: p.metadata?.longitude || null,
         timestamp: p.timestamp?.toISOString() || null,
+        vehicle_type: 'insured',
       }));
     
     if (vehiclePhotos.length > 0) {
       await savePhotos(vehiclePhotos);
     }
     
+    // 3. Guardar fotos del vehículo del tercero
+    const thirdPartyPhotos = (inspection.thirdPartyVehicle?.photos || [])
+      .filter((p: VehiclePhoto) => p.imageUrl)
+      .map((p: VehiclePhoto) => ({
+        inspection_id: inspectionId,
+        photo_type: 'vehicle' as const,
+        category: p.angle === 'damage' ? 'damage' : 'exterior',
+        angle: p.angle || null,
+        label: p.label || null,
+        description: p.description || null,
+        image_url: p.imageUrl || null,
+        thumbnail_url: p.thumbnailUrl || null,
+        latitude: p.metadata?.latitude || null,
+        longitude: p.metadata?.longitude || null,
+        timestamp: p.timestamp?.toISOString() || null,
+        vehicle_type: 'third_party',
+      }));
+    
+    if (thirdPartyPhotos.length > 0) {
+      await savePhotos(thirdPartyPhotos);
+    }
+    
+    // 4. Guardar fotos de la escena
     const scenePhotos = (inspection.accidentScene?.photos || [])
-      .filter((p: { imageUrl?: string | null }) => p.imageUrl)
-      .map((p: { description?: string; imageUrl?: string | null; location?: { lat?: number; lng?: number }; timestamp?: Date }) => ({
+      .filter((p: VehiclePhoto) => p.imageUrl)
+      .map((p: VehiclePhoto) => ({
         inspection_id: inspectionId,
         photo_type: 'scene' as const,
+        category: 'scene',
         angle: null,
-        label: p.description || 'Escena',
+        label: p.label || 'Escena del accidente',
+        description: p.description || null,
         image_url: p.imageUrl || null,
-        latitude: p.location?.lat || null,
-        longitude: p.location?.lng || null,
+        thumbnail_url: p.thumbnailUrl || null,
+        latitude: p.metadata?.latitude || null,
+        longitude: p.metadata?.longitude || null,
         timestamp: p.timestamp?.toISOString() || null,
+        vehicle_type: null,
       }));
     
     if (scenePhotos.length > 0) {
       await savePhotos(scenePhotos);
     }
     
+    // 5. Extraer y guardar daños detectados
+    const damagePhotos = (inspection.insuredVehicle?.photos || [])
+      .filter((p: VehiclePhoto) => p.angle === 'damage' && p.imageUrl);
+    
+    if (damagePhotos.length > 0) {
+      const damages = damagePhotos.map((p: VehiclePhoto, index: number) => ({
+        inspection_id: inspectionId,
+        part: p.label || `Daño ${index + 1}`,
+        type: 'Daño detectado',
+        severity: 'Moderado' as const,
+        description: p.description || null,
+        confidence: 85,
+        photo_url: p.imageUrl,
+      }));
+      
+      await saveDamages(damages);
+    }
+    
+    // 6. Guardar consentimiento y firma
     if (inspection.consent?.accepted) {
       await saveConsent({
         inspection_id: inspectionId,
         person_type: 'insured',
         accepted: true,
         signature_url: inspection.consent.signatureUrl || null,
+        ip_address: inspection.consent.ipAddress || null,
         timestamp: inspection.consent.timestamp?.toISOString() || new Date().toISOString(),
       });
     }
     
-    console.log('✅ Inspección guardada:', inspectionId);
+    console.log('✅ Inspección completa guardada:', inspectionId);
     return inspectionId;
     
   } catch (error) {
-    console.error('❌ Error guardando:', error);
+    console.error('❌ Error guardando inspección:', error);
     throw error;
   }
 }
@@ -113,6 +206,9 @@ function calculateRiskScore(inspection: Inspection): number {
   else if (age > 5) score += 5;
   
   if (inspection.accidentType === 'collision') score += 10;
+  if (inspection.accidentType === 'theft') score += 20;
+  if (inspection.hasThirdParty) score += 10;
+  if (!inspection.insuredVehicle?.hasGarage) score += 5;
   
   return Math.min(100, Math.max(0, score));
 }
@@ -120,12 +216,22 @@ function calculateRiskScore(inspection: Inspection): number {
 function calculateQualityScore(inspection: Inspection): number {
   let score = 100;
   
-  const vehiclePhotos = (inspection.insuredVehicle?.photos || []).filter((p: { imageUrl?: string | null }) => p.imageUrl).length;
+  const vehiclePhotos = (inspection.insuredVehicle?.photos || [])
+    .filter((p: VehiclePhoto) => p.imageUrl).length;
   if (vehiclePhotos < 8) score -= (8 - vehiclePhotos) * 5;
   
   if (!inspection.insuredPerson?.identity.validated) score -= 10;
+  if (!inspection.insuredPerson?.identity.frontImage) score -= 5;
   if (!inspection.insuredVehicle?.plate) score -= 5;
+  if (!inspection.insuredVehicle?.vin) score -= 5;
   if (!inspection.accidentScene?.location.address) score -= 5;
+  
+  if (inspection.hasThirdParty) {
+    if (!inspection.thirdPartyPerson?.identity.extractedData?.fullName) score -= 10;
+    if (!inspection.thirdPartyVehicle?.plate) score -= 5;
+  }
+  
+  if (inspection.consent?.signatureUrl) score += 5;
   
   return Math.min(100, Math.max(0, score));
 }
@@ -140,6 +246,10 @@ function generateTags(inspection: Inspection): string[] {
   if (new Date().getFullYear() - year > 8) tags.push('old-vehicle');
   
   if (inspection.hasThirdParty) tags.push('third-party');
+  if (inspection.accidentType === 'collision') tags.push('collision');
+  if (inspection.accidentType === 'theft') tags.push('theft');
+  if (inspection.accidentScene?.policePresent) tags.push('police-report');
+  if (inspection.accidentScene?.hasWitnesses) tags.push('witnesses');
   
   return tags;
 }
