@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Check, AlertCircle, User, CreditCard, Calendar, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, AlertCircle, User, CreditCard, Calendar, Loader2, Sparkles } from 'lucide-react';
 import { Button, Card, Badge, ProgressBar, ImageUploader, Alert } from '../ui';
 import { useInspectionStore } from '../../stores/inspectionStore';
 import { useOCR } from '../../hooks/useOCR';
@@ -16,50 +16,65 @@ export const IdentityStep: React.FC = () => {
     inspection.insuredPerson?.identity.backImage || null
   );
   const [isExtracting, setIsExtracting] = useState(false);
-  const [extractionComplete, setExtractionComplete] = useState(false);
+  const [extractionComplete, setExtractionComplete] = useState(
+    !!(inspection.insuredPerson?.identity.extractedData)
+  );
+  const [extractionError, setExtractionError] = useState<string | null>(null);
 
   const country = COUNTRIES.find((c) => c.code === inspection.country);
   const identityData = inspection.insuredPerson?.identity;
 
-  // Auto-extract data when both images are uploaded
-  useEffect(() => {
-    const extractData = async () => {
-      if (frontImage && backImage && !extractionComplete && !isExtracting) {
-        setIsExtracting(true);
-        try {
-          const result = await extractIdData(frontImage, backImage, inspection.country);
-          
-          updateInsuredIdentity({
-            frontImage,
-            backImage,
-            extractedData: result.data,
-            confidence: result.confidence,
-            validated: result.confidence >= 0.7,
-          });
-          
-          setExtractionComplete(true);
-        } catch (err) {
-          console.error('Error extracting data:', err);
-        } finally {
-          setIsExtracting(false);
-        }
-      }
-    };
-
-    extractData();
-  }, [frontImage, backImage]);
-
   const handleFrontImage = (imageData: string) => {
     setFrontImage(imageData);
     setExtractionComplete(false);
+    setExtractionError(null);
   };
 
   const handleBackImage = (imageData: string) => {
     setBackImage(imageData);
     setExtractionComplete(false);
+    setExtractionError(null);
+  };
+
+  // Manual extraction trigger
+  const handleExtractData = async () => {
+    if (!frontImage || !backImage) return;
+    
+    setIsExtracting(true);
+    setExtractionError(null);
+    
+    try {
+      console.log('Starting OCR extraction...');
+      const result = await extractIdData(frontImage, backImage, inspection.country);
+      console.log('OCR Result:', result);
+      
+      updateInsuredIdentity({
+        frontImage,
+        backImage,
+        extractedData: result.data,
+        confidence: result.confidence,
+        validated: result.confidence >= 0.7,
+      });
+      
+      setExtractionComplete(true);
+      
+      if (!result.data) {
+        setExtractionError('No se pudo extraer datos. Intenta con fotos más claras.');
+      }
+    } catch (err) {
+      console.error('Error extracting data:', err);
+      setExtractionError('Error al procesar. Intenta de nuevo.');
+    } finally {
+      setIsExtracting(false);
+    }
   };
 
   const handleContinue = () => {
+    // Save images even if OCR failed
+    updateInsuredIdentity({
+      frontImage,
+      backImage,
+    });
     nextStep();
   };
 
@@ -114,10 +129,36 @@ export const IdentityStep: React.FC = () => {
             Procesando documento...
           </h3>
           <p className="text-dark-400 mb-4">
-            Extrayendo información con IA
+            Extrayendo información con IA (puede tardar 15-30 segundos)
           </p>
           <ProgressBar progress={progress} showLabel color="primary" />
         </Card>
+      )}
+
+      {/* Extract Button - Show when both images are loaded but not yet processed */}
+      {frontImage && backImage && !extractionComplete && !isExtracting && !isProcessing && (
+        <Card className="text-center animate-fade-in">
+          <Sparkles className="w-10 h-10 text-primary-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">
+            ¡Fotos cargadas!
+          </h3>
+          <p className="text-dark-400 mb-4">
+            Haz clic para extraer los datos automáticamente con IA
+          </p>
+          <Button
+            onClick={handleExtractData}
+            leftIcon={<Sparkles className="w-5 h-5" />}
+          >
+            Extraer datos con IA
+          </Button>
+        </Card>
+      )}
+
+      {/* Extraction Error */}
+      {extractionError && (
+        <Alert variant="warning" icon={<AlertCircle className="w-5 h-5" />}>
+          {extractionError}
+        </Alert>
       )}
 
       {/* Extracted Data Display */}
@@ -196,7 +237,7 @@ export const IdentityStep: React.FC = () => {
           onClick={handleContinue}
           disabled={!frontImage || !backImage || isProcessing || isExtracting}
         >
-          Continuar
+          {extractionComplete ? 'Continuar' : 'Continuar sin OCR'}
         </Button>
       </div>
     </div>
