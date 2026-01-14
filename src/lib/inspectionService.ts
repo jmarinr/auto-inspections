@@ -154,22 +154,58 @@ export async function submitInspectionToSupabase(inspection: Inspection): Promis
       await savePhotos(scenePhotos);
     }
     
-    // 5. Extraer y guardar daños detectados
-    const damagePhotos = (inspection.insuredVehicle?.photos || [])
-      .filter((p: VehiclePhoto) => p.angle === 'damage' && p.imageUrl);
+    // 5. Guardar daños detectados desde damagePhotos
+    const damagePhotosData = inspection.damagePhotos || [];
     
-    if (damagePhotos.length > 0) {
-      const damages = damagePhotos.map((p: VehiclePhoto, index: number) => ({
+    if (damagePhotosData.length > 0) {
+      const allDamages: any[] = [];
+      
+      // También guardar las fotos de daños
+      const damagePhotoRecords = damagePhotosData.map((dp, index) => ({
         inspection_id: inspectionId,
-        part: p.label || `Daño ${index + 1}`,
-        type: 'Daño detectado',
-        severity: 'Moderado' as const,
-        description: p.description || null,
-        confidence: 85,
-        photo_url: p.imageUrl,
+        photo_type: 'damage' as const,
+        category: 'damage',
+        angle: 'damage',
+        label: `Foto de daño ${index + 1}`,
+        description: dp.analysis?.damages?.length 
+          ? `${dp.analysis.damages.length} daños detectados` 
+          : 'Foto de daño',
+        image_url: dp.imageUrl || null,
+        thumbnail_url: null,
+        latitude: null,
+        longitude: null,
+        timestamp: dp.timestamp ? new Date(dp.timestamp).toISOString() : null,
+        vehicle_type: 'insured',
       }));
       
-      await saveDamages(damages);
+      if (damagePhotoRecords.length > 0) {
+        await savePhotos(damagePhotoRecords);
+      }
+      
+      // Extraer daños individuales del análisis de cada foto
+      damagePhotosData.forEach((dp) => {
+        if (dp.analysis?.damages && dp.analysis.damages.length > 0) {
+          dp.analysis.damages.forEach((damage: any) => {
+            allDamages.push({
+              inspection_id: inspectionId,
+              part: damage.part || 'Parte no especificada',
+              type: damage.type || 'Daño detectado',
+              severity: damage.severity === 'minor' ? 'Leve' 
+                      : damage.severity === 'moderate' ? 'Moderado'
+                      : damage.severity === 'severe' ? 'Severo'
+                      : damage.severity === 'total_loss' ? 'Pérdida total'
+                      : 'Moderado',
+              description: damage.description || null,
+              confidence: Math.round((damage.confidence || 0.85) * 100),
+              photo_url: dp.imageUrl,
+            });
+          });
+        }
+      });
+      
+      if (allDamages.length > 0) {
+        await saveDamages(allDamages);
+      }
     }
     
     // 6. Guardar consentimiento y firma
@@ -209,6 +245,33 @@ function calculateRiskScore(inspection: Inspection): number {
   if (inspection.accidentType === 'theft') score += 20;
   if (inspection.hasThirdParty) score += 10;
   if (!inspection.insuredVehicle?.hasGarage) score += 5;
+  
+  // Considerar daños detectados
+  const damagePhotos = inspection.damagePhotos || [];
+  if (damagePhotos.length > 0) {
+    // Contar daños totales
+    let totalDamages = 0;
+    let hasSevereDamage = false;
+    let hasStructuralDamage = false;
+    
+    damagePhotos.forEach((dp) => {
+      if (dp.analysis?.damages) {
+        totalDamages += dp.analysis.damages.length;
+        dp.analysis.damages.forEach((d: any) => {
+          if (d.severity === 'severe' || d.severity === 'total_loss') hasSevereDamage = true;
+          if (d.affectsStructure) hasStructuralDamage = true;
+        });
+      }
+      if (dp.analysis?.vehicleStatus?.isDriveable === false) score += 15;
+    });
+    
+    if (totalDamages > 5) score += 15;
+    else if (totalDamages > 2) score += 10;
+    else if (totalDamages > 0) score += 5;
+    
+    if (hasSevereDamage) score += 10;
+    if (hasStructuralDamage) score += 10;
+  }
   
   return Math.min(100, Math.max(0, score));
 }
@@ -250,6 +313,28 @@ function generateTags(inspection: Inspection): string[] {
   if (inspection.accidentType === 'theft') tags.push('theft');
   if (inspection.accidentScene?.policePresent) tags.push('police-report');
   if (inspection.accidentScene?.hasWitnesses) tags.push('witnesses');
+  
+  // Tags de daños
+  const damagePhotos = inspection.damagePhotos || [];
+  if (damagePhotos.length > 0) {
+    let totalDamages = 0;
+    let hasSevereDamage = false;
+    let notDriveable = false;
+    
+    damagePhotos.forEach((dp) => {
+      if (dp.analysis?.damages) {
+        totalDamages += dp.analysis.damages.length;
+        dp.analysis.damages.forEach((d: any) => {
+          if (d.severity === 'severe' || d.severity === 'total_loss') hasSevereDamage = true;
+        });
+      }
+      if (dp.analysis?.vehicleStatus?.isDriveable === false) notDriveable = true;
+    });
+    
+    if (totalDamages > 0) tags.push(`${totalDamages}-damages`);
+    if (hasSevereDamage) tags.push('severe-damage');
+    if (notDriveable) tags.push('not-driveable');
+  }
   
   return tags;
 }
