@@ -9,7 +9,8 @@ import type {
   Consent,
   IdentityDocument,
   VehiclePhoto,
-  AccidentType
+  AccidentType,
+  DamagePhoto
 } from '../types';
 
 interface InspectionStore {
@@ -44,6 +45,11 @@ interface InspectionStore {
   updateAccidentScene: (data: Partial<AccidentScene>) => void;
   addScenePhoto: (photo: VehiclePhoto) => void;
   
+  // Damage actions
+  addDamagePhoto: (photo: DamagePhoto) => void;
+  removeDamagePhoto: (photoId: string) => void;
+  updateDamagePhoto: (photoId: string, data: Partial<DamagePhoto>) => void;
+  
   // Consent actions
   updateConsent: (data: Partial<Consent>) => void;
   
@@ -65,6 +71,7 @@ const createEmptyInspection = (): Inspection => ({
   thirdPartyPerson: null,
   thirdPartyVehicle: null,
   accidentScene: null,
+  damagePhotos: [],
   consent: {
     accepted: false,
   },
@@ -280,6 +287,33 @@ export const useInspectionStore = create<InspectionStore>()(
                 photos: [...state.inspection.accidentScene.photos, photo],
               }
             : null,
+          updatedAt: new Date(),
+        },
+      })),
+
+      // Damage Photos
+      addDamagePhoto: (photo) => set((state) => ({
+        inspection: {
+          ...state.inspection,
+          damagePhotos: [...state.inspection.damagePhotos, photo],
+          updatedAt: new Date(),
+        },
+      })),
+
+      removeDamagePhoto: (photoId) => set((state) => ({
+        inspection: {
+          ...state.inspection,
+          damagePhotos: state.inspection.damagePhotos.filter(p => p.id !== photoId),
+          updatedAt: new Date(),
+        },
+      })),
+
+      updateDamagePhoto: (photoId, data) => set((state) => ({
+        inspection: {
+          ...state.inspection,
+          damagePhotos: state.inspection.damagePhotos.map(p => 
+            p.id === photoId ? { ...p, ...data } : p
+          ),
           updatedAt: new Date(),
         },
       })),

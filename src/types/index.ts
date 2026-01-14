@@ -108,6 +108,14 @@ export interface Consent {
   ipAddress?: string;
 }
 
+// Damage photo type (analysis uses the type from useDamageDetection hook)
+export interface DamagePhoto {
+  id: string;
+  imageUrl: string;
+  timestamp: Date;
+  analysis?: any; // Uses DamageAnalysisResult from useDamageDetection hook
+}
+
 export type AccidentType = 
   | 'collision'
   | 'theft'
@@ -129,6 +137,7 @@ export interface Inspection {
   thirdPartyPerson: Person | null;
   thirdPartyVehicle: Vehicle | null;
   accidentScene: AccidentScene | null;
+  damagePhotos: DamagePhoto[];
   consent: Consent;
   createdAt: Date;
   updatedAt: Date;

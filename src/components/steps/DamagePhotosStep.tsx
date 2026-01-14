@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import { 
   Camera, AlertTriangle, X, Loader2, ShieldAlert, 
   ChevronDown, ChevronUp, Car, AlertCircle, Wrench, MapPin
@@ -12,25 +12,26 @@ import {
   getZoneLabel,
   getSeverityLabel, 
   getSeverityColor,
-  getImpactTypeLabel,
-  type DamageAnalysisResult 
+  getImpactTypeLabel
 } from '../../hooks/useDamageDetection';
 import { compressImage, fileToBase64 } from '../../lib/imageUtils';
-
-interface DamagePhoto {
-  id: string;
-  imageUrl: string;
-  timestamp: Date;
-  analysis?: DamageAnalysisResult;
-}
+import type { DamagePhoto } from '../../types';
 
 export const DamagePhotosStep: React.FC = () => {
-  const { nextStep, prevStep } = useInspectionStore();
+  const { 
+    inspection, 
+    nextStep, 
+    prevStep, 
+    addDamagePhoto, 
+    removeDamagePhoto,
+    updateDamagePhoto 
+  } = useInspectionStore();
   const { isAnalyzing, progress, analyzeImage } = useDamageDetection();
   
-  const [damagePhotos, setDamagePhotos] = useState<DamagePhoto[]>([]);
-  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
+  // Use damagePhotos from the store instead of local state
+  const damagePhotos = inspection.damagePhotos || [];
+  const [expandedPhoto, setExpandedPhoto] = React.useState<string | null>(null);
+  const [isCapturing, setIsCapturing] = React.useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,11 +50,14 @@ export const DamagePhotosStep: React.FC = () => {
         timestamp: new Date(),
       };
       
-      const analysis = await analyzeImage(base64);
-      newPhoto.analysis = analysis;
-      
-      setDamagePhotos(prev => [...prev, newPhoto]);
+      // Add photo to store immediately
+      addDamagePhoto(newPhoto);
       setExpandedPhoto(newPhoto.id);
+      
+      // Analyze and update
+      const analysis = await analyzeImage(base64);
+      updateDamagePhoto(newPhoto.id, { analysis });
+      
     } catch (error) {
       console.error('Error processing photo:', error);
     } finally {
@@ -63,7 +67,7 @@ export const DamagePhotosStep: React.FC = () => {
   };
 
   const handleRemovePhoto = (photoId: string) => {
-    setDamagePhotos(prev => prev.filter(p => p.id !== photoId));
+    removeDamagePhoto(photoId);
     if (expandedPhoto === photoId) setExpandedPhoto(null);
   };
 
@@ -233,7 +237,7 @@ export const DamagePhotosStep: React.FC = () => {
                   {/* Image with markers */}
                   <div className="relative rounded-lg overflow-hidden">
                     <img src={photo.imageUrl} alt="Daño" className="w-full rounded-lg" />
-                    {photo.analysis.damages.map((damage, idx) => (
+                    {photo.analysis.damages.map((damage: any, idx: number) => (
                       damage.boundingBox && (
                         <div
                           key={idx}
@@ -253,7 +257,7 @@ export const DamagePhotosStep: React.FC = () => {
                       <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                         Daños detectados:
                       </p>
-                      {photo.analysis.damages.map((damage, idx) => (
+                      {photo.analysis.damages.map((damage: any, idx: number) => (
                         <div 
                           key={idx} 
                           className="p-3 rounded-lg" 
@@ -352,7 +356,7 @@ export const DamagePhotosStep: React.FC = () => {
                         Recomendaciones:
                       </p>
                       <ul className="space-y-1">
-                        {photo.analysis.recommendations.map((rec, idx) => (
+                        {photo.analysis.recommendations.map((rec: any, idx: number) => (
                           <li key={idx} className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                             {rec}
                           </li>
